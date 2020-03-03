@@ -286,6 +286,7 @@ pace_heartrate <- function(df, xmin, xmax)
 ##### Add some tables
 ###
 # Tables: how many runs pr. month, year, week (janitor tabyl)
+# Interactive plots: hover to show value
 ###
 
 
