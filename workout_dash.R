@@ -6,14 +6,20 @@
 pacman::p_load(tidyverse, shiny, janitor, lubridate, scales, viridis)
 
 
+column_names <- c('activity_type', 'date', 'favorite', 'title', 'distance', 'calories', 'time', 'avg_hr', 'max_hr', 'avg_run_cadence',
+                  'max_run_cadence', 'avg_pace', 'best_pace', 'elev_gain', 'elev_loss', 'avg_stride_length', 'avg_vertical_ratio')
+
 load_and_clean <- function(filepath) {
   df <- read_csv(filepath) %>% 
-    clean_names()
+    select(c(1:17)) # Only keeping the columns which are not empty and actually used
+  
+  colnames(df) <- column_names
+  df$avg_hr <- as.numeric(df$avg_hr)
   # removing runs without heart rate measurements
-  df <- df[df$maks_puls != "--",]
+  df <- df[df$max_hr != "--",]
   # Adding aerobic/anaerobic column
   df <- df %>% 
-    mutate(aerob = ifelse(gennemsnitlig_puls < 155, 'Aerobic', 'Anaerobic'))
+    mutate(aerob = ifelse(avg_hr < 155, 'Aerobic', 'Anaerobic'))
 }
 
 #####################################
@@ -54,8 +60,8 @@ rev_date <- c_trans("reverse", "time")
 # Distance over time
 dist_by_time <- function(df, xmin = NULL, xmax = NULL){
   p <- df %>% 
-    mutate(dato = as.Date(dato)) %>% 
-    ggplot(aes(dato, distance, color = aerob)) + 
+    mutate(date = as.Date(date)) %>% 
+    ggplot(aes(date, distance, color = aerob)) + 
     theme_bw() +
     geom_point() +
     stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.5) +
@@ -82,24 +88,24 @@ dist_by_time <- function(df, xmin = NULL, xmax = NULL){
 # Distance pr month/week
 dist_by_month <- function(df, grouping, xmin = NULL, xmax = NULL){ 
   p <- df %>%
-    group_by(dato=floor_date(dato, grouping)) %>%
+    group_by(date=floor_date(date, grouping)) %>%
     summarize(distance=sum(distance)) %>%
-    mutate(dato = as.Date(dato)) %>%
-    ggplot(aes(dato, distance)) +
-    theme_bw() +
-    geom_point(color = 'steelblue2') +
-    geom_line(color = 'steelblue') +
-    stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.4, col = 'lightsteelblue') +
-    theme(legend.title = element_blank()) +
-    labs(x = 'Date', y = 'Distance (km)', title = paste('Km run per', grouping)) +
-    theme(axis.text.x = element_text(size = 13),
-          axis.text.y = element_text(size = 13),
-          axis.title.x = element_text(size = 13),
-          axis.title.y = element_text(size = 13),
-          legend.position = c(0.92, 0.1),
-          legend.text = element_text(size = 13),
-          legend.key = element_blank(),
-          legend.background = element_blank())
+    mutate(date = as.Date(date)) %>%
+    ggplot(aes(date, distance)) +
+      theme_bw() +
+      geom_point(color = 'steelblue2') +
+      geom_line(color = 'steelblue') +
+      stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.4, col = 'lightsteelblue') +
+      theme(legend.title = element_blank()) +
+      labs(x = 'Date', y = 'Distance (km)', title = paste('Km run per', grouping)) +
+      theme(axis.text.x = element_text(size = 13),
+            axis.text.y = element_text(size = 13),
+            axis.title.x = element_text(size = 13),
+            axis.title.y = element_text(size = 13),
+            legend.position = c(0.92, 0.1),
+            legend.text = element_text(size = 13),
+            legend.key = element_blank(),
+            legend.background = element_blank())
   if (!is.null(xmin)){
     p <- p +
       scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y")
@@ -114,8 +120,8 @@ dist_by_month <- function(df, grouping, xmin = NULL, xmax = NULL){
 # time pr run
 time_per_run <- function(df, xmin = NULL, xmax = NULL) {
   p <- df %>% 
-    mutate(dato = as.Date(dato)) %>% 
-    ggplot(aes(dato, tid, color = aerob)) +
+    mutate(date = as.Date(date)) %>% 
+    ggplot(aes(date, time, color = aerob)) +
     theme_bw() +
     geom_point() +
     stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.5) +
@@ -139,59 +145,59 @@ time_per_run <- function(df, xmin = NULL, xmax = NULL) {
 # # time spent running pr grouping
 time_per_month <- function(df, grouping, xmin, xmax){
   p <- df %>% 
-    group_by(dato = floor_date(dato, grouping)) %>%
-    summarize(time = sum(minute(tid))) %>%
-    mutate(dato = as.Date(dato)) %>% 
-    ggplot(aes(dato, time)) +
-    theme_bw() +
-    geom_point(color = 'steelblue2') +
-    geom_line(color = 'steelblue') +
-    stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.4, col = 'lightsteelblue') +
-    theme(legend.title = element_blank()) +
-    scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") +
-    labs(x = 'Date', y = 'Time (min)', title = paste('Minutes run per', grouping)) +
-    theme(axis.text.x = element_text(size = 13),
-          axis.text.y = element_text(size = 13),
-          axis.title.x = element_text(size = 13),
-          axis.title.y = element_text(size = 13),
-          legend.position = c(0.92, 0.1),
-          legend.text = element_text(size = 13),
-          legend.key = element_blank(),
-          legend.background = element_blank())
+    group_by(date = floor_date(date, grouping)) %>%
+    summarize(time = sum(minute(time))) %>%
+    mutate(date = as.Date(date)) %>% 
+    ggplot(aes(date, time)) +
+      theme_bw() +
+      geom_point(color = 'steelblue2') +
+      geom_line(color = 'steelblue') +
+      stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.4, col = 'lightsteelblue') +
+      theme(legend.title = element_blank()) +
+      scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") +
+      labs(x = 'Date', y = 'Time (min)', title = paste('Minutes run per', grouping)) +
+      theme(axis.text.x = element_text(size = 13),
+            axis.text.y = element_text(size = 13),
+            axis.title.x = element_text(size = 13),
+            axis.title.y = element_text(size = 13),
+            legend.position = c(0.92, 0.1),
+            legend.text = element_text(size = 13),
+            legend.key = element_blank(),
+            legend.background = element_blank())
   return(p)
 }
 
 # SPEED
 pace_per_run <- function(df, xmin, xmax){
   p <- df %>%
-    mutate(gennemsnitstempo = as.POSIXct(gennemsnitstempo, format = '%H:%M:%S'),
-           dato = as.Date(dato)) %>%
-    ggplot(aes(dato, gennemsnitstempo, color = aerob)) +
-    theme_bw() +
-    geom_point() +
-    stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.5) +
-    scale_color_brewer(palette = 'Dark2') +
-    theme(legend.title = element_blank()) +
-    scale_y_continuous(trans = rev_date) +
-    scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") +
-    labs(x = 'Date', y = 'Avg. pace (min/km)', title = 'Average pace') +
-    theme(axis.text.x = element_text(size = 13),
-          axis.text.y = element_text(size = 13),
-          axis.title.x = element_text(size = 13),
-          axis.title.y = element_text(size = 13),
-          legend.position = c(0.92, 0.1),
-          legend.text = element_text(size = 13),
-          legend.key = element_blank(),
-          legend.background = element_blank())
+    mutate(avg_pace = as.POSIXct(avg_pace, format = '%H:%M:%S'),
+           date = as.Date(date)) %>%
+    ggplot(aes(date, avg_pace, color = aerob)) +
+      theme_bw() +
+      geom_point() +
+      stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.5) +
+      scale_color_brewer(palette = 'Dark2') +
+      theme(legend.title = element_blank()) +
+      scale_y_continuous(trans = rev_date) +
+      scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") +
+      labs(x = 'Date', y = 'Avg. pace (min/km)', title = 'Average pace') +
+      theme(axis.text.x = element_text(size = 13),
+            axis.text.y = element_text(size = 13),
+            axis.title.x = element_text(size = 13),
+            axis.title.y = element_text(size = 13),
+            legend.position = c(0.92, 0.1),
+            legend.text = element_text(size = 13),
+            legend.key = element_blank(),
+            legend.background = element_blank())
 }
 
 pace_per_month <-function(df, grouping, xmin, xmax){
   p <- df %>%
-    group_by(dato = floor_date(dato, grouping)) %>%
-    summarize(pace = mean(period_to_seconds(hms(gennemsnitstempo)))) %>%
+    group_by(date = floor_date(date, grouping)) %>%
+    summarize(pace = mean(period_to_seconds(hms(avg_pace)))) %>%
     mutate(pace = seconds_to_period(pace),
-           dato = as.Date(dato)) %>%
-    ggplot(aes(dato, pace)) +
+           date = as.Date(date)) %>%
+    ggplot(aes(date, pace)) +
     theme_bw() +
     geom_point(color = 'steelblue2') +
     geom_line(color = 'steelblue') +
@@ -214,9 +220,9 @@ pace_per_month <-function(df, grouping, xmin, xmax){
 # pace, distance
 pace_distance <- function(df, xmin, xmax){
   p <- df %>%
-    mutate(gennemsnitstempo = as.POSIXct(gennemsnitstempo, format = '%H:%M:%S'),
-           dato = as.Date(dato)) %>%
-    ggplot(aes(dato, gennemsnitstempo, color = distance)) +
+    mutate(avg_pace = as.POSIXct(avg_pace, format = '%H:%M:%S'),
+           date = as.Date(date)) %>%
+    ggplot(aes(date, avg_pace, color = distance)) +
     theme_bw() +
     geom_point(size = 2) +
     scale_color_viridis(option = 'A', direction = -1) +
@@ -236,9 +242,9 @@ pace_distance <- function(df, xmin, xmax){
 
 pace_date_heartrate <- function(df, xmin, xmax){
   p <- df %>%
-    mutate(gennemsnitstempo = as.POSIXct(gennemsnitstempo, format = '%H:%M:%S'),
-           dato = as.Date(dato)) %>%
-    ggplot(aes(dato, gennemsnitstempo, color = gennemsnitlig_puls)) +
+    mutate(avg_pace = as.POSIXct(avg_pace, format = '%H:%M:%S'),
+           date = as.Date(date)) %>%
+    ggplot(aes(date, avg_pace, color = avg_hr)) +
     theme_bw() +
     geom_point(size = 2) +
     scale_color_viridis(option = 'A', direction = -1) +
@@ -263,9 +269,9 @@ pace_date_heartrate <- function(df, xmin, xmax){
 # pace, heart rate
 pace_heartrate <- function(df, xmin, xmax)
   p <- df %>%
-  filter(as.Date(dato) > xmin & as.Date(dato) < xmax) %>% 
-  mutate(gennemsnitstempo = as.POSIXct(gennemsnitstempo, format = '%H:%M:%S')) %>%
-  ggplot(aes(gennemsnitstempo, gennemsnitlig_puls)) +
+  filter(as.Date(date) > xmin & as.Date(date) < xmax) %>% 
+  mutate(avg_pace = as.POSIXct(avg_pace, format = '%H:%M:%S')) %>%
+  ggplot(aes(avg_pace, avg_hr)) +
   theme_bw() +
   geom_point(color = "steelblue") +
   geom_smooth(method = "lm", se = F, col = 'lightsteelblue', alpha = 0.6) +
@@ -286,7 +292,9 @@ pace_heartrate <- function(df, xmin, xmax)
 ##### Add some tables
 ###
 # Tables: how many runs pr. month, year, week (janitor tabyl)
+# See app for ideer 
 # Interactive plots: hover to show value
+# plots med elevation gain
 ###
 
 
