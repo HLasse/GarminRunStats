@@ -13,6 +13,8 @@ library(viridis)
 library(DT)
 library(formattable)
 library(RColorBrewer)
+library(shinyjs)
+library(shinycssloaders)
 # https://stackoverflow.com/questions/49404394/format-hover-data-labels-plotly-r
 # https://support.garmin.com/en-IE/?faq=FMKY5NYJJ71DbuPmFP4O7A
 # https://www.garmin.com/en-US/blog/general/get-zone-train-using-heart-rate/
@@ -61,11 +63,11 @@ load_and_clean <- function(filepath, gender = 'male', age = 25) {
     mutate(avg_hr = as.numeric(avg_hr),
            # converting time to minutes
            time = as.numeric(hms(time)) / 60)
-
+  
   # If running was not filtered when loading the data
   if (class(df$avg_pace) == "character"){
-      df <- df %>% 
-        mutate(avg_pace = parse_time(avg_pace))
+    df <- df %>% 
+      mutate(avg_pace = parse_time(avg_pace))
   }
   
   # if decimals are seperated by , not .
@@ -383,7 +385,7 @@ summary_tab <-function(df, grouping){
               min_pace = seconds_to_period(min(period_to_seconds(hms(avg_pace)))),
               max_pace = seconds_to_period(max(period_to_seconds(hms(avg_pace)))),
               avg_pace = seconds_to_period(mean(period_to_seconds(hms(avg_pace))))
-              ) 
+    ) 
 }
 
 
@@ -397,6 +399,7 @@ distance_tab <- function(df, grouping){
               max_distance = max(distance)
     ) %>% 
     mutate_if(is.numeric, round, 2) %>% 
+    arrange(desc(date)) %>% 
     formattable(align = c("l", rep("r", NCOL(.) - 1)),
                 list(date = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
                      n_runs = color_tile("transparent", "#74C476"),
@@ -405,7 +408,7 @@ distance_tab <- function(df, grouping){
                      min_distance = color_tile("transparent", "#74C476"),
                      max_distance = color_tile("transparent", "#74C476")),
                 col.names = c("Date", "N Runs", "Avg. Distance", "Total Distance", "Min Distance", "Max Distance")
-                )
+    )
 }
 
 #############################################################
@@ -417,60 +420,77 @@ distance_tab <- function(df, grouping){
 ###
 ############################################################
 
+## Shiny functions
+plot_gg <- function(plot) {
+  renderPlot({
+    req(data())
+    plot
+  })
+}
+
+pace_plot_gg <- function(plot) {
+  renderPlot({
+    if(is.null(data)){
+      return(NULL)
+    }else{
+      print(plot)
+    }
+  })
+}
+
+
 
 library(shiny)
 library(shinydashboard)
 
 ui <- dashboardPage(
   
-  dashboardHeader(title = "Run Tracker"),
+  dashboardHeader(title = "Garmin Run Tracker"),
   
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Dashboard", tabName ="Dashboard_tab", icon = icon("tachometer-alt"))
+      menuItem("Dashboard", tabName ="Dashboard_tab", icon = icon("tachometer-alt")),
+      numericInput("age",
+                   label = h5("Set your age"),
+                   value = 25)
+    ),
+    selectInput("gender",
+                label = h5("Select your gender"),
+                choices = list("Male" = "male",
+                               "Female" = "female")
+    ),
+    fileInput("file", h5("Upload a .csv file containing your activity data"),
+              accept = c(
+                "text/csv",
+                "text/comma-separated-values,text/plain",
+                ".csv")
     )
   ), #sidebar
   
   dashboardBody(
+    useShinyjs(),
     tabItems(
       tabItem(tabName = "Dashboard_tab",
               fluidPage(
-                box(title = "Upload data", status = "info", solidHeader = TRUE, width = 12,
-                    htmlOutput("text"),
-                    fluidRow(
-                      column(6,
-                             fileInput("file", h4("Upload a .csv file containing your activity data"),
-                                       accept = c(
-                                         "text/csv",
-                                         "text/comma-separated-values,text/plain",
-                                         ".csv")
-                             )
-                      )
+                div(id = "welcome_box_outer",
+                    box(id = "welcome_box", width = 12, div(id='welcome',
+                                                            h2("Welcome to Garmin Run Tracker!"),
+                                                            h5(htmlOutput("text")),
+                                                            actionButton("show_intro", "Got it!", icon = NULL, width = "200px")
+                    )
                     )
                 ),
-                box(title = "Set Variables", status = "info", solidHeader = TRUE, width = 12,
+                box(title = "Dynamic Variables", status = "primary", solidHeader = TRUE, width = 12,
                     fluidRow(
-                      column(4,
-                           numericInput("age",
-                                        label = h4("Set your age"),
-                                        value = 25)
-                           ),
-                    column(4, offset = 2,
-                           selectInput("gender",
-                                       label = h4("Select your gender"),
-                                       choices = list("Male" = "male",
-                                                      "Female" = "female")
-                                       )
-                           ),
-                      column(4,
+                      column(5,
                              dateRangeInput('date_range',
-                                            label = h4('Select date range'),
-                                            start = Sys.Date() - 550, end = Sys.Date()
+                                            label = h4('Date Range')#,
+                                           # start = Sys.Date() - 550, end = Sys.Date()
                              )
                       ),
-                      column(4, offset = 2,
+                      column(5, offset = 1,
                              selectInput("grouping", 
-                                         label = h4("Select grouping"), 
+                                         label = h4("Grouping"), 
                                          choices = list("1 Week" = "week", 
                                                         "2 Weeks" = "14 days",
                                                         "Month" = "month",
@@ -479,7 +499,6 @@ ui <- dashboardPage(
                                                         "Year" = "year"), 
                                          selected = 3)
                       )
-                    
                     )
                 ),
                 tabsetPanel(type='tabs',
@@ -489,43 +508,52 @@ ui <- dashboardPage(
                                        box(width=12, status = "success", title = "Distance",
                                            fluidRow(
                                              column(6,
-                                                    plotOutput("dist_by_time")
+                                                    plotOutput("dist_by_time") %>% 
+                                                      withSpinner(6)
                                              ),
                                              column(6,
-                                                    plotOutput("dist_by_month")
+                                                    plotOutput("dist_by_month") %>% 
+                                                      withSpinner(6)
                                              )
                                            )
                                        ),
                                        box(width = 12, status = "success", title = "Time",
                                            fluidRow(
                                              column(6,
-                                                    plotOutput("time_per_run")
+                                                    plotOutput("time_per_run") %>% 
+                                                      withSpinner(6)
                                              ),
                                              column(6,
-                                                    plotOutput("time_per_month")
+                                                    plotOutput("time_per_month") %>% 
+                                                      withSpinner(6)
                                              )
                                            )
                                        ),
                                        box(width=12, status = "success", title = "Pace",
                                            fluidRow(
                                              column(6,
-                                                    plotOutput("pace_per_run")
+                                                    plotOutput("pace_per_run") %>% 
+                                                      withSpinner(6)
                                              ),
                                              column(6,
-                                                    plotOutput("pace_per_month")
+                                                    plotOutput("pace_per_month") %>% 
+                                                      withSpinner(6)
                                              )
                                            ),
                                            fluidRow(
                                              column(6,
-                                                    plotOutput("pace_distance")
+                                                    plotOutput("pace_distance") %>% 
+                                                      withSpinner(6)
                                              ),
                                              column(6,
-                                                    plotOutput('pace_date_heartrate')
+                                                    plotOutput('pace_date_heartrate') %>% 
+                                                      withSpinner(6)
                                              )
                                            ),
                                            fluidRow(
                                              column(6,
-                                                    plotOutput("pace_heartrate"))
+                                                    plotOutput("pace_heartrate")) %>% 
+                                               withSpinner(6)
                                            )
                                        )
                                      )
@@ -544,7 +572,7 @@ ui <- dashboardPage(
 )#ui end
 
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   ### Reading data from input file
   data <- reactive({
     req(input$file)
@@ -557,6 +585,8 @@ server <- function(input, output) {
   values$xmax <- NULL
   values$grouping <- NULL
   
+  values$date_start <- NULL
+  
   # Update date values when set
   observeEvent(input$date_range, {
     values$xmin <- input$date_range[1]
@@ -568,14 +598,36 @@ server <- function(input, output) {
     values$grouping <- input$grouping
   })
   
+  # Remove welcome box
+  observeEvent(input$show_intro, {
+    hide(id = "welcome_box_outer", anim = TRUE)
+  })
+  
+  # Automatically scale date range
+  observe({
+    req(data())
+    updateDateRangeInput(session, "date_range",
+                         start = min(as.Date(data()$date)))
+  })
+  
+  # Collapse sidebar after uploading file
+  observeEvent(input$file, {
+    shinyjs::addClass(selector = "body", class = "sidebar-collapse")
+  })
+  
+  
   ####### DOWNLOAD CSV GUIDE
   output$text <- renderUI({
-    str1 <- "To use this application, log in to "
+    str0 <- "To get started, input your age and gender in the sidebar to the left to calibrate heart rate zones.<br/>"
+    str1 <- "Then, log in to "
     url <- a("Garmin Connect", href="https://connect.garmin.com/")
     str2 <- " and click 'Activities' --> 'All activities'.<br/>"
     str3 <- "<br>Click on the running symbol to only display runs, scroll to the bottom of the page and keep scrolling until it no longer refreshes.<br/>"
-    str4 <- "<br>Click 'Export CSV' and input the file below.<br/>"
-    HTML(paste0(str1, url, str2, str3, str4))
+    str4 <- "<br>Click 'Export CSV' and upload the file in the box in the sidebar.<br/>"
+    str5 <- "<br>The date range and grouping of graphs and tables can dynamically be set using the buttons in the box below.<br/>"
+    str6 <- "<br>Navigate the app by clicking on the tabs.<br/>"
+    str7 <- "<br>Have fun!"
+    HTML(paste0(str0, str1, url, str2, str3, str4, str5, str6, str7))
   })
   
   
@@ -587,7 +639,7 @@ server <- function(input, output) {
     filter = "top", # location of column filters
     
     options = list( 
-    scrollX = TRUE) # allow user to scroll wide tables horizontally
+      scrollX = TRUE) # allow user to scroll wide tables horizontally
   )
   
   ###### TABLES
@@ -606,29 +658,30 @@ server <- function(input, output) {
   })
   
   output$dist_by_month <- renderPlot({
-      req(data())
-      dist_by_month(data(), values$grouping, values$xmin, values$xmax)
-
+    req(data())
+    dist_by_month(data(), values$grouping, values$xmin, values$xmax)
+    
   })
   
   ##### TIME PLOTS
   output$time_per_run <- renderPlot({
-      req(data())
-      time_per_run(data(), values$xmin, values$xmax)
-    })  
+    req(data())
+    time_per_run(data(), values$xmin, values$xmax)
+  })  
   
   output$time_per_month <- renderPlot({
-      req(data())
-      time_per_month(data(), values$grouping, values$xmin, values$xmax)
-    })
-  ###### PACE
+    req(data())
+    time_per_month(data(), values$grouping, values$xmin, values$xmax)
+  })
+  
+  # pace
   output$pace_per_run <- renderPlot({
     if(is.null(data)){
       return(NULL)
     }else{
       plot <- pace_per_run(data(), values$xmin, values$xmax)
-      print(plot)
-    }})  
+      plot
+    }})
   
   output$pace_per_month <- renderPlot({
     if(is.null(data)){
@@ -645,7 +698,7 @@ server <- function(input, output) {
       plot <- pace_distance(data(), values$xmin, values$xmax)
       print(plot)
     }})
-  
+    
   output$pace_date_heartrate <- renderPlot({
     if(is.null(data)){
       return(NULL)

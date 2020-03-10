@@ -1,0 +1,13 @@
+name: GarminRunStats
+title: GarminRunStats
+username:
+account: hlasse
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1913389
+bundleId: 2867958
+url: https://hlasse.shinyapps.io/GarminRunStats/
+when: 1583852557.75714
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Activities.csv|ActivitiesAll.csv|ActivitiesMatilde.csv|ActivitiesSimon.csv|Exercise1.R|Exercise2.R|Exercise3.R|Exercise4.R|Exercise5.R|golem.pdf|hover_tip_test.R|README.md|shiny.pdf|tab_test.R|test.R|test2.R

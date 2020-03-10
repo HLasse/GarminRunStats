@@ -4,9 +4,13 @@
 
 
 #devtools::install_github("Roche/ggtips")
-pacman::p_load(tidyverse, shiny, janitor, lubridate, scales, viridis, plotly, ggtips)
-
-
+#pacman::p_load(tidyverse, shiny, janitor, lubridate, scales, viridis, plotly)
+library(tidyverse)
+library(shiny)
+library(janitor)
+library(lubridate)
+library(scales)
+library(viridis)
 # https://stackoverflow.com/questions/49404394/format-hover-data-labels-plotly-r
 # https://support.garmin.com/en-IE/?faq=FMKY5NYJJ71DbuPmFP4O7A
 # https://www.garmin.com/en-US/blog/general/get-zone-train-using-heart-rate/
@@ -32,7 +36,7 @@ load_and_clean <- function(filepath) {
     mutate(avg_hr = as.numeric(avg_hr),
            # converting time to minutes
            time = as.numeric(hms(time)) / 60)
-
+  
   # if decimals are seperated by , not .
   if (isTRUE(all.equal(df$distance, as.integer(df$distance)))){
     df$distance <- df$distance / 100
@@ -86,20 +90,20 @@ dist_by_time <- function(df, xmin = NULL, xmax = NULL){
   p <- df %>% 
     mutate(date = as.Date(date)) %>% 
     ggplot(aes(date, distance, color = aerob)) + 
-      theme_bw() +
-      geom_point() +
-      stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.5) +
-      scale_color_brewer(palette = 'Dark2') +
-      theme(legend.title = element_blank()) +
-      labs(x = 'Date', y = 'Distance (km)', title = 'Distance run') +
-      theme(axis.text.x = element_text(size = 13),
-            axis.text.y = element_text(size = 13),
-            axis.title.x = element_text(size = 13),
-            axis.title.y = element_text(size = 13),
-            legend.position = c(0.92, 0.1),
-            legend.text = element_text(size = 13),
-            legend.key = element_blank(),
-            legend.background = element_blank())
+    theme_bw() +
+    geom_point() +
+    stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.5) +
+    scale_color_brewer(palette = 'Dark2') +
+    theme(legend.title = element_blank()) +
+    labs(x = 'Date', y = 'Distance (km)', title = 'Distance run') +
+    theme(axis.text.x = element_text(size = 13),
+          axis.text.y = element_text(size = 13),
+          axis.title.x = element_text(size = 13),
+          axis.title.y = element_text(size = 13),
+          legend.position = c(0.92, 0.1),
+          legend.text = element_text(size = 13),
+          legend.key = element_blank(),
+          legend.background = element_blank())
   if (!is.null(xmin)){
     p <- p +
       scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") 
@@ -116,20 +120,20 @@ dist_by_month <- function(df, grouping, xmin = NULL, xmax = NULL){
     summarize(distance=sum(distance)) %>%
     mutate(date = as.Date(date)) %>%
     ggplot(aes(date, distance)) +
-      theme_bw() +
-      geom_point(color = 'steelblue2') +
-      geom_line(color = 'steelblue') +
-      stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.4, col = 'lightsteelblue') +
-      theme(legend.title = element_blank()) +
-      labs(x = 'Date', y = 'Distance (km)', title = paste('Km run per', grouping)) +
-      theme(axis.text.x = element_text(size = 13),
-            axis.text.y = element_text(size = 13),
-            axis.title.x = element_text(size = 13),
-            axis.title.y = element_text(size = 13),
-            legend.position = c(0.92, 0.1),
-            legend.text = element_text(size = 13),
-            legend.key = element_blank(),
-            legend.background = element_blank())
+    theme_bw() +
+    geom_point(color = 'steelblue2') +
+    geom_line(color = 'steelblue') +
+    stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.4, col = 'lightsteelblue') +
+    theme(legend.title = element_blank()) +
+    labs(x = 'Date', y = 'Distance (km)', title = paste('Km run per', grouping)) +
+    theme(axis.text.x = element_text(size = 13),
+          axis.text.y = element_text(size = 13),
+          axis.title.x = element_text(size = 13),
+          axis.title.y = element_text(size = 13),
+          legend.position = c(0.92, 0.1),
+          legend.text = element_text(size = 13),
+          legend.key = element_blank(),
+          legend.background = element_blank())
   if (!is.null(xmin)){
     p <- p +
       scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y")
@@ -151,7 +155,7 @@ time_per_run <- function(df, xmin = NULL, xmax = NULL) {
     stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.5) +
     scale_color_brewer(palette = 'Dark2') +
     theme(legend.title = element_blank()) +
-   # scale_y_time(labels = time_format("%H:%M")) +
+    # scale_y_time(labels = time_format("%H:%M")) +
     labs(x = 'Date', y = 'Minutes', title = 'Time pr. run') +
     scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") +
     theme(axis.text.x = element_text(size = 13),
@@ -173,21 +177,21 @@ time_per_month <- function(df, grouping, xmin, xmax){
     summarize(time = sum(time)) %>%
     mutate(date = as.Date(date)) %>% 
     ggplot(aes(date, time)) +
-      theme_bw() +
-      geom_point(color = 'steelblue2') +
-      geom_line(color = 'steelblue') +
-      stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.4, col = 'lightsteelblue') +
-      theme(legend.title = element_blank()) +
-      scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") +
-      labs(x = 'Date', y = 'Minutes', title = paste('Minutes run per', grouping)) +
-      theme(axis.text.x = element_text(size = 13),
-            axis.text.y = element_text(size = 13),
-            axis.title.x = element_text(size = 13),
-            axis.title.y = element_text(size = 13),
-            legend.position = c(0.92, 0.1),
-            legend.text = element_text(size = 13),
-            legend.key = element_blank(),
-            legend.background = element_blank())
+    theme_bw() +
+    geom_point(color = 'steelblue2') +
+    geom_line(color = 'steelblue') +
+    stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.4, col = 'lightsteelblue') +
+    theme(legend.title = element_blank()) +
+    scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") +
+    labs(x = 'Date', y = 'Minutes', title = paste('Minutes run per', grouping)) +
+    theme(axis.text.x = element_text(size = 13),
+          axis.text.y = element_text(size = 13),
+          axis.title.x = element_text(size = 13),
+          axis.title.y = element_text(size = 13),
+          legend.position = c(0.92, 0.1),
+          legend.text = element_text(size = 13),
+          legend.key = element_blank(),
+          legend.background = element_blank())
   return(p)
 }
 
@@ -197,22 +201,22 @@ pace_per_run <- function(df, xmin, xmax){
     mutate(avg_pace = as.POSIXct(avg_pace, format = '%H:%M:%S'),
            date = as.Date(date)) %>%
     ggplot(aes(date, avg_pace, color = aerob)) +
-      theme_bw() +
-      geom_point() +
-      stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.5) +
-      scale_color_brewer(palette = 'Dark2') +
-      theme(legend.title = element_blank()) +
-      scale_y_continuous(trans = rev_date) +
-      scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") +
-      labs(x = 'Date', y = 'Avg. pace (min/km)', title = 'Average pace') +
-      theme(axis.text.x = element_text(size = 13),
-            axis.text.y = element_text(size = 13),
-            axis.title.x = element_text(size = 13),
-            axis.title.y = element_text(size = 13),
-            legend.position = c(0.92, 0.1),
-            legend.text = element_text(size = 13),
-            legend.key = element_blank(),
-            legend.background = element_blank())
+    theme_bw() +
+    geom_point() +
+    stat_smooth(geom = 'line', method = 'lm', se = FALSE, alpha = 0.5) +
+    scale_color_brewer(palette = 'Dark2') +
+    theme(legend.title = element_blank()) +
+    scale_y_continuous(trans = rev_date) +
+    scale_x_date(limits = as.Date(c(xmin, xmax), format="%d/%m/%Y"), date_labels = "%b-%Y") +
+    labs(x = 'Date', y = 'Avg. pace (min/km)', title = 'Average pace') +
+    theme(axis.text.x = element_text(size = 13),
+          axis.text.y = element_text(size = 13),
+          axis.title.x = element_text(size = 13),
+          axis.title.y = element_text(size = 13),
+          legend.position = c(0.92, 0.1),
+          legend.text = element_text(size = 13),
+          legend.key = element_blank(),
+          legend.background = element_blank())
 }
 
 pace_per_month <-function(df, grouping, xmin, xmax){
@@ -383,6 +387,10 @@ ui <- dashboardPage(
                       )
                     )
                 ),
+              tabsetPanel(type='tabs',
+                     tabPanel(title = strong("Plots"),
+                              
+                    fluidRow(        
                 box(width=12, status = "success", title = "Distance",
                     fluidRow(
                       column(6,
@@ -425,6 +433,10 @@ ui <- dashboardPage(
                              plotOutput("pace_heartrate"))
                     )
                 )
+              )
+              ),
+              tabPanel(title = strong("Tables"))
+              )
               )
       )#tabItem ends
     )#tabItems
