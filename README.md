@@ -1,7 +1,7 @@
 # GarminRunStats
 A ShinyR app for visualizing running progress using your data from Garmin Connect.
 
-Try the app in action [here](https://hlasse.shinyapps.io/GarminRunStats/]).
+Try the app in action [here](https://hlasse.shinyapps.io/GarminRunStats/).
 
 ## Main Features
 * Interactive graphs of development of distance, time, and pace over time and with dynamic groupings.
