@@ -15,6 +15,8 @@ library(formattable)
 library(RColorBrewer)
 library(shinyjs)
 library(shinycssloaders)
+devtools::install_github("rasmusab/fullcalendar")
+library(fullcalendar)
 # https://stackoverflow.com/questions/49404394/format-hover-data-labels-plotly-r
 # https://support.garmin.com/en-IE/?faq=FMKY5NYJJ71DbuPmFP4O7A
 # https://www.garmin.com/en-US/blog/general/get-zone-train-using-heart-rate/
@@ -421,25 +423,6 @@ distance_tab <- function(df, grouping){
 ############################################################
 
 ## Shiny functions
-plot_gg <- function(plot) {
-  renderPlot({
-    req(data())
-    plot
-  })
-}
-
-pace_plot_gg <- function(plot) {
-  renderPlot({
-    if(is.null(data)){
-      return(NULL)
-    }else{
-      print(plot)
-    }
-  })
-}
-
-
-
 library(shiny)
 library(shinydashboard)
 
@@ -562,6 +545,11 @@ ui <- dashboardPage(
                                      fluidRow(
                                        formattableOutput("dist_table")
                                      )),
+                            tabPanel(title = strong("Calendar"),
+                                     fullcalendarOutput("calendar", 
+                                                        height = 'auto')
+                                     ),
+                            
                             tabPanel(title = strong("Raw Data"),
                                      dataTableOutput("raw_data"))
                 )
@@ -648,6 +636,17 @@ server <- function(input, output, session) {
     distance_tab(data(), values$grouping)
   })
   
+  #### CALENDAR WIDGET
+  output$calendar <- renderFullcalendar({
+    req(data())
+    df <- data()
+    data <- data.frame(title = paste(df$distance, "km in", round(df$time, 0), "min"), 
+                       start = as.Date(df$date),
+                       end = as.Date(df$date),
+                       color = '#74C476')
+    
+    fullcalendar(data)
+  })
   
   
   ####################################### PLOTS
