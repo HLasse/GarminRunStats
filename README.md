@@ -1,5 +1,5 @@
 # GarminRunStats
-A ShinyR app for visualizing running progress downloaded from Garmin Connect.
+A ShinyR app for visualizing running progress using your data from Garmin Connect.
 
 Try the app in action [here](https://hlasse.shinyapps.io/GarminRunStats/]).
 
