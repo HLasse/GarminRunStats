@@ -435,7 +435,7 @@ ui <- dashboardPage(
       menuItem("Dashboard", tabName ="Dashboard_tab", icon = icon("tachometer-alt")),
       numericInput("age",
                    label = h5("Set your age"),
-                   value = 25)
+                   value = 28)
     ),
     selectInput("gender",
                 label = h5("Select your gender"),
