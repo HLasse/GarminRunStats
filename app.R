@@ -15,7 +15,7 @@ library(formattable)
 library(RColorBrewer)
 library(shinyjs)
 library(shinycssloaders)
-devtools::install_github("rasmusab/fullcalendar")
+#githubinstall::githubinstall("rasmusab/fullcalendar")
 library(fullcalendar)
 # https://stackoverflow.com/questions/49404394/format-hover-data-labels-plotly-r
 # https://support.garmin.com/en-IE/?faq=FMKY5NYJJ71DbuPmFP4O7A
@@ -397,19 +397,26 @@ distance_tab <- function(df, grouping){
     summarize(n_runs = n(),
               avg_distance = mean(distance),
               total_distance = sum(distance),
-              min_distance = min(distance),
-              max_distance = max(distance)
+              max_distance = max(distance),
+              total_time = sum(time)) %>% 
+    mutate(diff_distance = total_distance - lag(total_distance),
+              percent_greater_distance = (total_distance - lag(total_distance)) / lag(total_distance) * 100,
+              diff_time = total_time - lag(total_time)
     ) %>% 
     mutate_if(is.numeric, round, 2) %>% 
+    mutate(percent_greater_distance = paste0(percent_greater_distance, "%")) %>% 
     arrange(desc(date)) %>% 
     formattable(align = c("l", rep("r", NCOL(.) - 1)),
                 list(date = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
                      n_runs = color_tile("transparent", "#74C476"),
+                     max_distance = color_tile("transparent", "#74C476"),
                      avg_distance = color_tile("transparent", "#74C476"),
                      total_distance = color_tile("transparent", "#74C476"),
-                     min_distance = color_tile("transparent", "#74C476"),
-                     max_distance = color_tile("transparent", "#74C476")),
-                col.names = c("Date", "N Runs", "Avg. Distance", "Total Distance", "Min Distance", "Max Distance")
+                     diff_distance = color_tile("transparent", "#74C476"),
+                     percent_greater_distance = color_tile("transparent", "#74C476"),
+                     total_time = color_tile("transparent", "#74C476"),
+                     diff_time = color_tile("transparent", "#74C476")),
+                col.names = c("Date", "N Runs", "Avg. Distance", "Total Distance", "Max Distance", "Total time",  "Diff distance", "% greater distance",  "Diff time")
     )
 }
 
