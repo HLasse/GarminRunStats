@@ -420,6 +420,32 @@ distance_tab <- function(df, grouping){
     )
 }
 
+distance_tab <- function(df, grouping){
+  df %>%
+  group_by(date = floor_date(date, grouping)) %>%
+  summarize(n_runs = n(),
+            avg_distance = mean(distance),
+            total_distance = sum(distance),
+            max_distance = max(distance),
+            total_time = sum(time)) %>% 
+  mutate(diff_distance = total_distance - lag(total_distance),
+         percent_greater_distance = (total_distance - lag(total_distance)) / lag(total_distance) * 100,
+         diff_time = total_time - lag(total_time)
+  ) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  mutate(
+    percent_greater_distance= case_when(
+      percent_greater_distance > 10 ~ cell_spec(percent_greater_distance, background = "red"),
+      percent_greater_distance > 0 & percent_greater_distance < 10  ~ 
+        cell_spec(percent_greater_distance, background = "lightgreen"),
+      TRUE ~ cell_spec(percent_greater_distance)
+    )
+  )%>% 
+  mutate(percent_greater_distance = paste0(percent_greater_distance, "%")) %>% 
+  arrange(desc(date)) %>% 
+  kbl(digits=2, escape=F, col.names = c("Date", "N Runs", "Avg. Distance", "Total Distance", "Max Distance", "Total time",  "Diff distance", "% greater distance",  "Diff time")) %>% 
+  kable_styling()
+}
 #############################################################
 ###
 ###
@@ -550,7 +576,7 @@ ui <- dashboardPage(
                             ),
                             tabPanel(title = strong("Tables"),
                                      fluidRow(
-                                       formattableOutput("dist_table")
+                                       htmlOutput("dist_table")
                                      )),
                             tabPanel(title = strong("Calendar"),
                                      fullcalendarOutput("calendar", 
@@ -638,7 +664,7 @@ server <- function(input, output, session) {
   )
   
   ###### TABLES
-  output$dist_table <- renderFormattable({
+  output$dist_table <- renderText({
     req(data())
     distance_tab(data(), values$grouping)
   })
