@@ -15,8 +15,9 @@ library(formattable)
 library(RColorBrewer)
 library(shinyjs)
 library(shinycssloaders)
-#githubinstall::githubinstall("rasmusab/fullcalendar")
+devtools::install_github("rasmusab/fullcalendar")
 library(fullcalendar)
+library(kableExtra)
 # https://stackoverflow.com/questions/49404394/format-hover-data-labels-plotly-r
 # https://support.garmin.com/en-IE/?faq=FMKY5NYJJ71DbuPmFP4O7A
 # https://www.garmin.com/en-US/blog/general/get-zone-train-using-heart-rate/
@@ -155,7 +156,7 @@ dist_by_time <- function(df, xmin = NULL, xmax = NULL){
 # Distance pr month/week
 dist_by_month <- function(df, grouping, xmin = NULL, xmax = NULL){ 
   p <- df %>%
-    group_by(date=floor_date(date, grouping)) %>%
+    group_by(date=floor_date(date, grouping, week_start=getOption("lubridate.week.start", 1))) %>%
     summarize(distance=sum(distance)) %>%
     mutate(date = as.Date(date)) %>%
     ggplot(aes(date, distance)) +
@@ -212,7 +213,7 @@ time_per_run <- function(df, xmin = NULL, xmax = NULL) {
 # # time spent running pr grouping
 time_per_month <- function(df, grouping, xmin, xmax){
   p <- df %>% 
-    group_by(date = floor_date(date, grouping)) %>%
+    group_by(date = floor_date(date, grouping, week_start=getOption("lubridate.week.start", 1))) %>%
     summarize(time = sum(time)) %>%
     mutate(date = as.Date(date)) %>% 
     ggplot(aes(date, time)) +
@@ -260,7 +261,7 @@ pace_per_run <- function(df, xmin, xmax){
 
 pace_per_month <-function(df, grouping, xmin, xmax){
   p <- df %>%
-    group_by(date = floor_date(date, grouping)) %>%
+    group_by(date = floor_date(date, grouping, week_start=getOption("lubridate.week.start", 1))) %>%
     summarize(pace = mean(period_to_seconds(hms(avg_pace)))) %>%
     mutate(pace = seconds_to_period(pace),
            date = as.Date(date)) %>%
@@ -374,7 +375,7 @@ xmax = "2020-03-03"
 
 summary_tab <-function(df, grouping){
   p <- df %>%
-    group_by(date = floor_date(date, grouping)) %>%
+    group_by(date = floor_date(date, grouping, week_start=getOption("lubridate.week.start", 1))) %>%
     summarize(n_runs = n(),
               avg_distance = mean(distance),
               total_distance = sum(distance),
@@ -393,7 +394,7 @@ summary_tab <-function(df, grouping){
 
 distance_tab <- function(df, grouping){
   p <- df %>%
-    group_by(date = floor_date(date, grouping)) %>%
+    group_by(date = floor_date(date, grouping, week_start=getOption("lubridate.week.start", 1))) %>%
     summarize(n_runs = n(),
               avg_distance = mean(distance),
               total_distance = sum(distance),
@@ -422,7 +423,7 @@ distance_tab <- function(df, grouping){
 
 distance_tab <- function(df, grouping){
   df %>%
-  group_by(date = floor_date(date, grouping)) %>%
+  group_by(date = floor_date(date, grouping, week_start=getOption("lubridate.week.start", 1))) %>%
   summarize(n_runs = n(),
             avg_distance = mean(distance),
             total_distance = sum(distance),
@@ -576,7 +577,7 @@ ui <- dashboardPage(
                             ),
                             tabPanel(title = strong("Tables"),
                                      fluidRow(
-                                       htmlOutput("dist_table")
+                                       tableOutput("dist_table")
                                      )),
                             tabPanel(title = strong("Calendar"),
                                      fullcalendarOutput("calendar", 
